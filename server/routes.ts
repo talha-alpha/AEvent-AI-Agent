@@ -28,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const room = await storage.createRoom({
         ...validatedData,
         livekitRoomName,
-      } as any);
+      });
       
       res.json(room);
     } catch (error) {
@@ -103,9 +103,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const token = await createAccessToken(room.livekitRoomName, participantName);
       
+      const { env } = await import("./env");
       res.json({ 
         token,
-        url: process.env.LIVEKIT_URL,
+        url: env.LIVEKIT_URL,
         roomName: room.livekitRoomName
       });
     } catch (error) {

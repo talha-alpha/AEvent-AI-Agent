@@ -19,6 +19,7 @@ import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq } from "drizzle-orm";
+import { env } from "./env";
 
 export interface IStorage {
   // User methods
@@ -30,7 +31,7 @@ export interface IStorage {
   getRoom(id: string): Promise<Room | undefined>;
   getRoomByLivekitName(livekitRoomName: string): Promise<Room | undefined>;
   getUserRooms(userId: string): Promise<Room[]>;
-  createRoom(room: InsertRoom): Promise<Room>;
+  createRoom(data: InsertRoom & { livekitRoomName: string }): Promise<Room>;
   updateRoomStatus(id: string, status: string): Promise<void>;
   
   // Message methods
@@ -101,7 +102,7 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async createRoom(insertRoom: InsertRoom): Promise<Room> {
+  async createRoom(insertRoom: InsertRoom & { livekitRoomName: string }): Promise<Room> {
     const id = randomUUID();
     const room: Room = { 
       ...insertRoom, 
@@ -203,8 +204,7 @@ export class DatabaseStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    const connectionString = process.env.DATABASE_URL!;
-    const sql = neon(connectionString);
+    const sql = neon(env.DATABASE_URL);
     this.db = drizzle(sql);
   }
 
@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(rooms).where(eq(rooms.userId, userId));
   }
 
-  async createRoom(insertRoom: InsertRoom): Promise<Room> {
+  async createRoom(insertRoom: InsertRoom & { livekitRoomName: string }): Promise<Room> {
     const result = await this.db.insert(rooms).values(insertRoom).returning();
     return result[0];
   }
@@ -295,4 +295,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
+export const storage = new DatabaseStorage();
