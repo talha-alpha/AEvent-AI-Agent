@@ -244,16 +244,18 @@ export default function AgentRoom() {
     const initializeRoom = async () => {
       try {
         // Create room
-        const roomResponse = await apiRequest("POST", "/api/rooms", {
+        const roomRes = await apiRequest("POST", "/api/rooms", {
           name: "AI Agent Session",
           userId: "demo-user",
           status: "active",
         });
+        const roomResponse = await roomRes.json();
 
         // Get token
-        const tokenResponse = await apiRequest("POST", `/api/rooms/${roomResponse.id}/token`, {
+        const tokenRes = await apiRequest("POST", `/api/rooms/${roomResponse.id}/token`, {
           participantName: "user",
         });
+        const tokenResponse = await tokenRes.json();
 
         setRoomId(roomResponse.id);
         setToken(tokenResponse.token);
@@ -302,7 +304,7 @@ export default function AgentRoom() {
       audio={false}
       video={false}
     >
-      <AgentRoomContent roomName={roomName} />
+      <AgentRoomContent roomName={roomName} roomId={roomId} />
     </LiveKitRoom>
   );
 }
