@@ -24,11 +24,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create LiveKit room
       await createLiveKitRoom(livekitRoomName);
       
-      // Create room in storage
+      // Create room in storage with generated livekitRoomName
       const room = await storage.createRoom({
         ...validatedData,
         livekitRoomName,
-      });
+      } as any);
       
       res.json(room);
     } catch (error) {
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "participantName is required" });
       }
       
-      const token = createAccessToken(room.livekitRoomName, participantName);
+      const token = await createAccessToken(room.livekitRoomName, participantName);
       
       res.json({ 
         token,

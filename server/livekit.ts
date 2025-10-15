@@ -6,7 +6,7 @@ const apiSecret = process.env.LIVEKIT_API_SECRET || "";
 
 export const roomClient = new RoomServiceClient(livekitUrl, apiKey, apiSecret);
 
-export function createAccessToken(roomName: string, participantName: string): string {
+export async function createAccessToken(roomName: string, participantName: string): Promise<string> {
   const at = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
   });
@@ -19,7 +19,7 @@ export function createAccessToken(roomName: string, participantName: string): st
     canPublishData: true,
   });
 
-  return at.toJwt();
+  return await at.toJwt();
 }
 
 export async function createLiveKitRoom(roomName: string): Promise<void> {

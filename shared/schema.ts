@@ -64,6 +64,7 @@ export const insertRoomSchema = createInsertSchema(rooms).omit({
   id: true,
   createdAt: true,
   endedAt: true,
+  livekitRoomName: true,
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({

@@ -8,9 +8,17 @@ import {
   type AgentSession,
   type InsertAgentSession,
   type DataSource,
-  type InsertDataSource
+  type InsertDataSource,
+  users,
+  rooms,
+  messages,
+  agentSessions,
+  dataSources
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -98,6 +106,7 @@ export class MemStorage implements IStorage {
     const room: Room = { 
       ...insertRoom, 
       id,
+      status: insertRoom.status || "active",
       createdAt: new Date(),
       endedAt: null
     };
@@ -130,6 +139,8 @@ export class MemStorage implements IStorage {
     const message: Message = { 
       ...insertMessage, 
       id,
+      type: insertMessage.type || "text",
+      metadata: insertMessage.metadata || null,
       createdAt: new Date()
     };
     this.messages.set(id, message);
@@ -147,6 +158,8 @@ export class MemStorage implements IStorage {
     const session: AgentSession = { 
       ...insertSession, 
       id,
+      status: insertSession.status || "initializing",
+      metadata: insertSession.metadata || null,
       lastActivity: new Date()
     };
     this.agentSessions.set(id, session);
@@ -178,6 +191,7 @@ export class MemStorage implements IStorage {
     const dataSource: DataSource = { 
       ...insertDataSource, 
       id,
+      isActive: insertDataSource.isActive ?? true,
       createdAt: new Date()
     };
     this.dataSources.set(id, dataSource);
@@ -185,4 +199,100 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  private db: ReturnType<typeof drizzle>;
+
+  constructor() {
+    const connectionString = process.env.DATABASE_URL!;
+    const sql = neon(connectionString);
+    this.db = drizzle(sql);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getRoom(id: string): Promise<Room | undefined> {
+    const result = await this.db.select().from(rooms).where(eq(rooms.id, id));
+    return result[0];
+  }
+
+  async getRoomByLivekitName(livekitRoomName: string): Promise<Room | undefined> {
+    const result = await this.db.select().from(rooms).where(eq(rooms.livekitRoomName, livekitRoomName));
+    return result[0];
+  }
+
+  async getUserRooms(userId: string): Promise<Room[]> {
+    return await this.db.select().from(rooms).where(eq(rooms.userId, userId));
+  }
+
+  async createRoom(insertRoom: InsertRoom): Promise<Room> {
+    const result = await this.db.insert(rooms).values(insertRoom).returning();
+    return result[0];
+  }
+
+  async updateRoomStatus(id: string, status: string): Promise<void> {
+    await this.db.update(rooms).set({ 
+      status,
+      endedAt: status === "ended" ? new Date() : null
+    }).where(eq(rooms.id, id));
+  }
+
+  async getMessage(id: string): Promise<Message | undefined> {
+    const result = await this.db.select().from(messages).where(eq(messages.id, id));
+    return result[0];
+  }
+
+  async getRoomMessages(roomId: string): Promise<Message[]> {
+    return await this.db.select().from(messages).where(eq(messages.roomId, roomId));
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const result = await this.db.insert(messages).values(insertMessage).returning();
+    return result[0];
+  }
+
+  async getAgentSession(roomId: string): Promise<AgentSession | undefined> {
+    const result = await this.db.select().from(agentSessions).where(eq(agentSessions.roomId, roomId));
+    return result[0];
+  }
+
+  async createAgentSession(insertSession: InsertAgentSession): Promise<AgentSession> {
+    const result = await this.db.insert(agentSessions).values(insertSession).returning();
+    return result[0];
+  }
+
+  async updateAgentStatus(roomId: string, status: string): Promise<void> {
+    await this.db.update(agentSessions).set({ 
+      status,
+      lastActivity: new Date()
+    }).where(eq(agentSessions.roomId, roomId));
+  }
+
+  async getDataSource(id: string): Promise<DataSource | undefined> {
+    const result = await this.db.select().from(dataSources).where(eq(dataSources.id, id));
+    return result[0];
+  }
+
+  async getUserDataSources(userId: string): Promise<DataSource[]> {
+    return await this.db.select().from(dataSources).where(eq(dataSources.userId, userId));
+  }
+
+  async createDataSource(insertDataSource: InsertDataSource): Promise<DataSource> {
+    const result = await this.db.insert(dataSources).values(insertDataSource).returning();
+    return result[0];
+  }
+}
+
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
