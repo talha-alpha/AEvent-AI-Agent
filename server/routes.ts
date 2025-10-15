@@ -19,6 +19,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertRoomSchema.parse(req.body);
       
+      // Ensure demo user exists for development
+      let userId = validatedData.userId;
+      if (userId === "demo-user") {
+        let demoUser = await storage.getUserByUsername("demo");
+        if (!demoUser) {
+          try {
+            demoUser = await storage.createUser({
+              username: "demo",
+              email: "demo@example.com",
+              password: "hashed_password_placeholder",
+            });
+          } catch (createUserError) {
+            // User might already exist, try fetching again
+            demoUser = await storage.getUserByUsername("demo");
+            if (!demoUser) {
+              throw new Error("Failed to create or find demo user");
+            }
+          }
+        }
+        userId = demoUser.id;
+      } else {
+        // Verify user exists
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(400).json({ error: "User not found" });
+        }
+      }
+      
       const livekitRoomName = `room-${randomUUID()}`;
       
       // Create LiveKit room
@@ -26,7 +54,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create room in storage with generated livekitRoomName
       const room = await storage.createRoom({
-        ...validatedData,
+        name: validatedData.name,
+        userId,
+        status: validatedData.status || "active",
         livekitRoomName,
       });
       
@@ -43,6 +73,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get room by ID
   app.get("/api/rooms/:id", async (req, res) => {
     try {
+      if (!req.params.id || req.params.id === "undefined") {
+        return res.status(400).json({ error: "Invalid room ID" });
+      }
+      
       const room = await storage.getRoom(req.params.id);
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
@@ -91,14 +125,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate LiveKit access token
   app.post("/api/rooms/:id/token", async (req, res) => {
     try {
+      if (!req.params.id || req.params.id === "undefined") {
+        return res.status(400).json({ error: "Invalid room ID" });
+      }
+      
       const room = await storage.getRoom(req.params.id);
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
       }
       
       const { participantName } = req.body;
-      if (!participantName) {
-        return res.status(400).json({ error: "participantName is required" });
+      if (!participantName || typeof participantName !== "string") {
+        return res.status(400).json({ error: "Valid participantName is required" });
       }
       
       const token = await createAccessToken(room.livekitRoomName, participantName);
@@ -120,20 +158,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const roomId = req.query.roomId as string;
       
-      // For now, return demo messages since we don't have a room yet
-      const demoMessages = [
-        {
-          id: randomUUID(),
-          roomId: roomId || "demo",
-          sender: "agent",
-          content: "Hello! I'm your AI agent. How can I help you today?",
-          type: "text",
-          metadata: null,
-          createdAt: new Date(Date.now() - 60000),
-        },
-      ];
-      
       if (!roomId) {
+        // Return demo messages for initial UI load
+        const demoMessages = [
+          {
+            id: randomUUID(),
+            roomId: "demo",
+            sender: "agent",
+            content: "Hello! I'm your AI agent. How can I help you today?",
+            type: "text",
+            metadata: null,
+            createdAt: new Date(Date.now() - 60000),
+          },
+        ];
         return res.json(demoMessages);
       }
       
