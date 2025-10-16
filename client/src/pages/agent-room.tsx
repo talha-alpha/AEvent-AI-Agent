@@ -6,40 +6,18 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import type { AgentStatus } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Room, RoomEvent, Track } from "livekit-client";
-import { LiveKitRoom, useRoomContext, useTracks } from "@livekit/components-react";
+import { RoomEvent } from "livekit-client";
+import { LiveKitRoom, useRoomContext } from "@livekit/components-react";
 
 function AgentRoomContent({ roomName }: { roomName: string }) {
   const room = useRoomContext();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [micEnabled, setMicEnabled] = useState(false);
-  const [videoEnabled, setVideoEnabled] = useState(false);
-  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("idle");
   const [isConnected, setIsConnected] = useState(false);
   const [latency, setLatency] = useState<number | undefined>();
-
-  const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: true },
-    ],
-    { onlySubscribed: false }
-  );
-
-  const localVideoTrack = tracks.find(
-    (track) => track.participant.isLocal && track.source === Track.Source.Camera
-  )?.publication?.track?.mediaStreamTrack;
-
-  const localScreenTrack = tracks.find(
-    (track) => track.participant.isLocal && track.source === Track.Source.ScreenShare
-  )?.publication?.track?.mediaStreamTrack;
-
-  const remoteVideoTrack = tracks.find(
-    (track) => !track.participant.isLocal && track.source === Track.Source.Camera
-  )?.publication?.track?.mediaStreamTrack;
 
   useEffect(() => {
     if (room) {
@@ -92,31 +70,6 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
     }
   };
 
-  const handleVideoToggle = async (enabled: boolean) => {
-    try {
-      await room?.localParticipant.setCameraEnabled(enabled);
-      setVideoEnabled(enabled);
-    } catch (error: any) {
-      toast({
-        title: "Camera error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleScreenShareToggle = async (enabled: boolean) => {
-    try {
-      await room?.localParticipant.setScreenShareEnabled(enabled);
-      setScreenShareEnabled(enabled);
-    } catch (error: any) {
-      toast({
-        title: "Screen share error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleEndSession = async () => {
     await room?.disconnect();
@@ -137,21 +90,21 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
         <div className="flex-1 p-6">
           <VideoDisplay
             agentStatus={agentStatus}
-            localVideoTrack={localVideoTrack || localScreenTrack}
-            remoteVideoTrack={remoteVideoTrack}
+            localVideoTrack={undefined}
+            remoteVideoTrack={undefined}
             isConnected={isConnected}
             latency={latency}
           />
         </div>
         <ControlBar
           onMicToggle={handleMicToggle}
-          onVideoToggle={handleVideoToggle}
-          onScreenShareToggle={handleScreenShareToggle}
+          onVideoToggle={() => {}}
+          onScreenShareToggle={() => {}}
           onSettingsClick={() => setSettingsOpen(true)}
           onEndSession={handleEndSession}
           micEnabled={micEnabled}
-          videoEnabled={videoEnabled}
-          screenShareEnabled={screenShareEnabled}
+          videoEnabled={false}
+          screenShareEnabled={false}
         />
       </div>
 

@@ -51,30 +51,6 @@ export function ControlBar({
 
       <Button
         size="icon"
-        variant={videoEnabled ? "default" : "secondary"}
-        className="h-12 w-12 rounded-full"
-        onClick={() => onVideoToggle(!videoEnabled)}
-        data-testid="button-toggle-video"
-      >
-        {videoEnabled ? (
-          <Video className="h-5 w-5" />
-        ) : (
-          <VideoOff className="h-5 w-5" />
-        )}
-      </Button>
-
-      <Button
-        size="icon"
-        variant={screenShareEnabled ? "destructive" : "secondary"}
-        className="h-12 w-12 rounded-full"
-        onClick={() => onScreenShareToggle(!screenShareEnabled)}
-        data-testid="button-toggle-screenshare"
-      >
-        <MonitorUp className="h-5 w-5" />
-      </Button>
-
-      <Button
-        size="icon"
         variant="ghost"
         className="h-12 w-12 rounded-full"
         onClick={onSettingsClick}
