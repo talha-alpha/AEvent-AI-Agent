@@ -1,18 +1,15 @@
 import { useState, useEffect } from "react";
 import { VideoDisplay } from "@/components/video-display";
-import { ChatInterface } from "@/components/chat-interface";
 import { ControlBar } from "@/components/control-bar";
 import { SettingsModal } from "@/components/settings-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { Message, AgentStatus } from "@shared/schema";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { AgentStatus } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { LiveKitRoom, useRoomContext, useTracks } from "@livekit/components-react";
 
-function AgentRoomContent({ roomName, roomId }: { roomName: string; roomId: string }) {
+function AgentRoomContent({ roomName }: { roomName: string }) {
   const room = useRoomContext();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -61,78 +58,21 @@ function AgentRoomContent({ roomName, roomId }: { roomName: string; roomId: stri
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         if (participant.identity.includes("agent")) {
           setAgentStatus("listening");
+          toast({
+            title: "AI Agent Connected",
+            description: "The AI agent has joined the session",
+          });
+        }
+      });
+
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        // Update agent status based on audio playback
+        if (room.canPlaybackAudio) {
+          setAgentStatus("speaking");
         }
       });
     }
-  }, [room]);
-
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages", roomId],
-    queryFn: async () => {
-      const response = await fetch(`/api/messages?roomId=${roomId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch messages");
-      }
-      return response.json();
-    },
-    refetchInterval: 2000, // Poll every 2 seconds for new messages
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return apiRequest("POST", "/api/messages", {
-        roomId,
-        content,
-        sender: "user",
-        type: "text",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      setAgentStatus("thinking");
-      setTimeout(() => setAgentStatus("speaking"), 1000);
-      setTimeout(() => setAgentStatus("listening"), 3000);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error sending message",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const sendImageMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("image", file);
-      formData.append("roomId", roomId);
-      
-      const response = await fetch("/api/messages/image", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to upload image");
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
-      setAgentStatus("thinking");
-      setTimeout(() => setAgentStatus("speaking"), 1000);
-      setTimeout(() => setAgentStatus("listening"), 3000);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error uploading image",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  }, [room, toast]);
 
   const handleMicToggle = async (enabled: boolean) => {
     try {
@@ -188,42 +128,31 @@ function AgentRoomContent({ roomName, roomId }: { roomName: string; roomId: stri
       <header className="flex items-center justify-between px-6 py-3 border-b bg-card">
         <div>
           <h1 className="text-xl font-semibold">AI Agent Session</h1>
-          <p className="text-sm text-muted-foreground">Multimodal AI Assistant</p>
+          <p className="text-sm text-muted-foreground">Voice-enabled Multimodal AI Assistant</p>
         </div>
         <ThemeToggle />
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 lg:w-3/5 flex flex-col">
-          <div className="flex-1 p-6">
-            <VideoDisplay
-              agentStatus={agentStatus}
-              localVideoTrack={localVideoTrack || localScreenTrack}
-              remoteVideoTrack={remoteVideoTrack}
-              isConnected={isConnected}
-              latency={latency}
-            />
-          </div>
-          <ControlBar
-            onMicToggle={handleMicToggle}
-            onVideoToggle={handleVideoToggle}
-            onScreenShareToggle={handleScreenShareToggle}
-            onSettingsClick={() => setSettingsOpen(true)}
-            onEndSession={handleEndSession}
-            micEnabled={micEnabled}
-            videoEnabled={videoEnabled}
-            screenShareEnabled={screenShareEnabled}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 p-6">
+          <VideoDisplay
+            agentStatus={agentStatus}
+            localVideoTrack={localVideoTrack || localScreenTrack}
+            remoteVideoTrack={remoteVideoTrack}
+            isConnected={isConnected}
+            latency={latency}
           />
         </div>
-
-        <div className="w-full lg:w-2/5 border-l">
-          <ChatInterface
-            messages={messages}
-            onSendMessage={(content) => sendMessageMutation.mutate(content)}
-            onSendImage={(file) => sendImageMutation.mutate(file)}
-            isLoading={sendMessageMutation.isPending || sendImageMutation.isPending}
-          />
-        </div>
+        <ControlBar
+          onMicToggle={handleMicToggle}
+          onVideoToggle={handleVideoToggle}
+          onScreenShareToggle={handleScreenShareToggle}
+          onSettingsClick={() => setSettingsOpen(true)}
+          onEndSession={handleEndSession}
+          micEnabled={micEnabled}
+          videoEnabled={videoEnabled}
+          screenShareEnabled={screenShareEnabled}
+        />
       </div>
 
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
@@ -236,29 +165,43 @@ export default function AgentRoom() {
   const [token, setToken] = useState<string>("");
   const [serverUrl, setServerUrl] = useState<string>("");
   const [roomName, setRoomName] = useState<string>("");
-  const [roomId, setRoomId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Create a room and get token
     const initializeRoom = async () => {
       try {
         // Create room
-        const roomResponse = await apiRequest("POST", "/api/rooms", {
-          name: "AI Agent Session",
-          userId: "demo-user",
-          status: "active",
+        const roomResponse = await fetch("/api/rooms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "AI Agent Session" }),
         });
+
+        if (!roomResponse.ok) {
+          throw new Error("Failed to create room");
+        }
+
+        const room = await roomResponse.json();
 
         // Get token
-        const tokenResponse = await apiRequest("POST", `/api/rooms/${roomResponse.id}/token`, {
-          participantName: "user",
+        const tokenResponse = await fetch("/api/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomName: room.livekitRoomName,
+            participantName: "user",
+          }),
         });
 
-        setRoomId(roomResponse.id);
-        setToken(tokenResponse.token);
-        setServerUrl(tokenResponse.url);
-        setRoomName(tokenResponse.roomName);
+        if (!tokenResponse.ok) {
+          throw new Error("Failed to get token");
+        }
+
+        const tokenData = await tokenResponse.json();
+
+        setToken(tokenData.token);
+        setServerUrl(tokenData.url);
+        setRoomName(room.livekitRoomName);
         setIsLoading(false);
       } catch (error: any) {
         toast({
@@ -299,7 +242,7 @@ export default function AgentRoom() {
       token={token}
       serverUrl={serverUrl}
       connect={true}
-      audio={false}
+      audio={true}
       video={false}
     >
       <AgentRoomContent roomName={roomName} />
