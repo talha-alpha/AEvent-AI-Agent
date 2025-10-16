@@ -2,6 +2,16 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
 
+// Log configuration status on startup
+const isLiveKitConfigured = !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
+if (!isLiveKitConfigured) {
+  console.warn("⚠️  LiveKit is not configured. AI agent functionality will be unavailable.");
+  console.warn("   Please set the following environment variables:");
+  console.warn("   - LIVEKIT_URL");
+  console.warn("   - LIVEKIT_API_KEY");
+  console.warn("   - LIVEKIT_API_SECRET");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

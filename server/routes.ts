@@ -11,6 +11,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new room
   app.post("/api/rooms", async (req, res) => {
     try {
+      // Check if LiveKit is configured
+      const hasLiveKitConfig = process.env.LIVEKIT_URL?.trim() && 
+                                process.env.LIVEKIT_API_KEY?.trim() && 
+                                process.env.LIVEKIT_API_SECRET?.trim();
+      if (!hasLiveKitConfig) {
+        return res.status(503).json({ 
+          error: "LiveKit is not configured", 
+          message: "Please configure LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables to enable AI agent functionality." 
+        });
+      }
+      
       const validatedData = createRoomSchema.parse(req.body);
       
       const livekitRoomName = `room-${randomUUID()}`;
@@ -69,6 +80,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get LiveKit access token
   app.post("/api/token", async (req, res) => {
     try {
+      // Check if LiveKit is configured
+      const hasLiveKitConfig = process.env.LIVEKIT_URL?.trim() && 
+                                process.env.LIVEKIT_API_KEY?.trim() && 
+                                process.env.LIVEKIT_API_SECRET?.trim();
+      if (!hasLiveKitConfig) {
+        return res.status(503).json({ 
+          error: "LiveKit is not configured", 
+          message: "Please configure LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables to enable AI agent functionality." 
+        });
+      }
+      
       const { roomName, participantName } = tokenRequestSchema.parse(req.body);
       
       const token = await createAccessToken(roomName, participantName);

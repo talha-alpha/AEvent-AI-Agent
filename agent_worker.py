@@ -97,11 +97,19 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     # Run the worker
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    ws_url = os.getenv("LIVEKIT_URL")
+    
+    if not all([api_key, api_secret, ws_url]):
+        logger.error("Missing required environment variables: LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL")
+        exit(1)
+    
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
-            api_key=os.getenv("LIVEKIT_API_KEY"),
-            api_secret=os.getenv("LIVEKIT_API_SECRET"),
-            ws_url=os.getenv("LIVEKIT_URL"),
+            api_key=api_key,
+            api_secret=api_secret,
+            ws_url=ws_url,
         )
     )

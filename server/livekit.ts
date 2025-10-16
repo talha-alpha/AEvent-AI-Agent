@@ -1,12 +1,19 @@
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 
-const livekitUrl = process.env.LIVEKIT_URL!;
-const apiKey = process.env.LIVEKIT_API_KEY!;
-const apiSecret = process.env.LIVEKIT_API_SECRET!;
+const livekitUrl = process.env.LIVEKIT_URL || "";
+const apiKey = process.env.LIVEKIT_API_KEY || "";
+const apiSecret = process.env.LIVEKIT_API_SECRET || "";
 
-export const roomClient = new RoomServiceClient(livekitUrl, apiKey, apiSecret);
+// Only initialize if credentials are available
+export const roomClient = livekitUrl && apiKey && apiSecret 
+  ? new RoomServiceClient(livekitUrl, apiKey, apiSecret)
+  : null;
 
-export function createAccessToken(roomName: string, participantName: string): string {
+export async function createAccessToken(roomName: string, participantName: string): Promise<string> {
+  if (!apiKey || !apiSecret) {
+    throw new Error("LiveKit credentials not configured. Please set LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables.");
+  }
+  
   const at = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
   });
@@ -19,10 +26,14 @@ export function createAccessToken(roomName: string, participantName: string): st
     canPublishData: true,
   });
 
-  return at.toJwt();
+  return await at.toJwt();
 }
 
 export async function createLiveKitRoom(roomName: string): Promise<void> {
+  if (!roomClient) {
+    throw new Error("LiveKit is not configured. Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables.");
+  }
+  
   try {
     await roomClient.createRoom({
       name: roomName,
@@ -38,6 +49,11 @@ export async function createLiveKitRoom(roomName: string): Promise<void> {
 }
 
 export async function deleteLiveKitRoom(roomName: string): Promise<void> {
+  if (!roomClient) {
+    console.warn("LiveKit is not configured, skipping room deletion");
+    return;
+  }
+  
   try {
     await roomClient.deleteRoom(roomName);
   } catch (error) {

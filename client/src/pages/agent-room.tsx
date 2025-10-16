@@ -14,6 +14,8 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [micEnabled, setMicEnabled] = useState(false);
+  const [videoEnabled, setVideoEnabled] = useState(false);
+  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("idle");
   const [isConnected, setIsConnected] = useState(false);
@@ -70,6 +72,37 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
     }
   };
 
+  const handleVideoToggle = async (enabled: boolean) => {
+    try {
+      await room?.localParticipant.setCameraEnabled(enabled);
+      setVideoEnabled(enabled);
+    } catch (error: any) {
+      toast({
+        title: "Camera error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleScreenShareToggle = async (enabled: boolean) => {
+    try {
+      await room?.localParticipant.setScreenShareEnabled(enabled);
+      setScreenShareEnabled(enabled);
+      if (enabled) {
+        toast({
+          title: "Screen sharing started",
+          description: "Your screen is now being shared with the AI agent",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Screen share error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEndSession = async () => {
     await room?.disconnect();
@@ -98,13 +131,13 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
         </div>
         <ControlBar
           onMicToggle={handleMicToggle}
-          onVideoToggle={() => {}}
-          onScreenShareToggle={() => {}}
+          onVideoToggle={handleVideoToggle}
+          onScreenShareToggle={handleScreenShareToggle}
           onSettingsClick={() => setSettingsOpen(true)}
           onEndSession={handleEndSession}
           micEnabled={micEnabled}
-          videoEnabled={false}
-          screenShareEnabled={false}
+          videoEnabled={videoEnabled}
+          screenShareEnabled={screenShareEnabled}
         />
       </div>
 
@@ -131,6 +164,10 @@ export default function AgentRoom() {
         });
 
         if (!roomResponse.ok) {
+          const errorData = await roomResponse.json();
+          if (roomResponse.status === 503) {
+            throw new Error(errorData.message || "LiveKit service is not configured");
+          }
           throw new Error("Failed to create room");
         }
 
@@ -147,6 +184,10 @@ export default function AgentRoom() {
         });
 
         if (!tokenResponse.ok) {
+          const errorData = await tokenResponse.json();
+          if (tokenResponse.status === 503) {
+            throw new Error(errorData.message || "LiveKit service is not configured");
+          }
           throw new Error("Failed to get token");
         }
 
@@ -158,8 +199,8 @@ export default function AgentRoom() {
         setIsLoading(false);
       } catch (error: any) {
         toast({
-          title: "Failed to initialize room",
-          description: error.message,
+          title: "Configuration Required",
+          description: error.message || "Please configure the required API keys to use the AI agent.",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -196,7 +237,8 @@ export default function AgentRoom() {
       serverUrl={serverUrl}
       connect={true}
       audio={true}
-      video={false}
+      video={true}
+      screen={true}
     >
       <AgentRoomContent roomName={roomName} />
     </LiveKitRoom>
