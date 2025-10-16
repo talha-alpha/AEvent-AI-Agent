@@ -32,7 +32,7 @@ export function ControlBar({
   screenShareEnabled,
 }: ControlBarProps) {
   return (
-    <div className="flex items-center justify-center gap-6 p-4 bg-card border-t">
+    <div className="flex items-center justify-center gap-4 p-4 bg-card border-t">
       <Button
         size="icon"
         variant={micEnabled ? "default" : "secondary"}
@@ -52,7 +52,9 @@ export function ControlBar({
       <Button
         size="icon"
         variant={videoEnabled ? "default" : "secondary"}
-        className="h-12 w-12 rounded-full"
+        className={`h-12 w-12 rounded-full ${
+          videoEnabled ? "bg-chart-3 hover:bg-chart-3/90" : ""
+        }`}
         onClick={() => onVideoToggle(!videoEnabled)}
         data-testid="button-toggle-video"
       >
@@ -65,8 +67,10 @@ export function ControlBar({
 
       <Button
         size="icon"
-        variant={screenShareEnabled ? "destructive" : "secondary"}
-        className="h-12 w-12 rounded-full"
+        variant={screenShareEnabled ? "default" : "secondary"}
+        className={`h-12 w-12 rounded-full ${
+          screenShareEnabled ? "bg-primary hover:bg-primary/90" : ""
+        }`}
         onClick={() => onScreenShareToggle(!screenShareEnabled)}
         data-testid="button-toggle-screenshare"
       >

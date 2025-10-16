@@ -1,8 +1,6 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+<<<<<<< HEAD
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -98,11 +96,32 @@ export type AgentSession = typeof agentSessions.$inferSelect;
 export type InsertDataSource = z.infer<typeof insertDataSourceSchema>;
 export type DataSource = typeof dataSources.$inferSelect;
 
+=======
+>>>>>>> 177f2d5e28c3d00ada6c2b5e9b58ad7684a622b6
 // Agent status types
 export type AgentStatus = "initializing" | "listening" | "thinking" | "speaking" | "idle";
 
-// Message types
-export type MessageType = "text" | "image" | "audio";
+// Room interface
+export interface Room {
+  id: string;
+  name: string;
+  livekitRoomName: string;
+  status: "active" | "ended";
+  createdAt: Date;
+  endedAt?: Date | null;
+}
 
-// Room status types
-export type RoomStatus = "active" | "ended";
+// Room creation schema
+export const createRoomSchema = z.object({
+  name: z.string().min(1),
+});
+
+export type CreateRoom = z.infer<typeof createRoomSchema>;
+
+// Token request schema
+export const tokenRequestSchema = z.object({
+  roomName: z.string(),
+  participantName: z.string(),
+});
+
+export type TokenRequest = z.infer<typeof tokenRequestSchema>;

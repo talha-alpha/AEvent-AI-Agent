@@ -7,8 +7,17 @@ export const roomClient = new RoomServiceClient(
   env.LIVEKIT_API_SECRET
 );
 
+// Only initialize if credentials are available
+export const roomClient = livekitUrl && apiKey && apiSecret 
+  ? new RoomServiceClient(livekitUrl, apiKey, apiSecret)
+  : null;
+
 export async function createAccessToken(roomName: string, participantName: string): Promise<string> {
-  const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
+  if (!apiKey || !apiSecret) {
+    throw new Error("LiveKit credentials not configured. Please set LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables.");
+  }
+  
+  const at = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
   });
 
@@ -24,6 +33,10 @@ export async function createAccessToken(roomName: string, participantName: strin
 }
 
 export async function createLiveKitRoom(roomName: string): Promise<void> {
+  if (!roomClient) {
+    throw new Error("LiveKit is not configured. Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables.");
+  }
+  
   try {
     await roomClient.createRoom({
       name: roomName,
@@ -39,6 +52,11 @@ export async function createLiveKitRoom(roomName: string): Promise<void> {
 }
 
 export async function deleteLiveKitRoom(roomName: string): Promise<void> {
+  if (!roomClient) {
+    console.warn("LiveKit is not configured, skipping room deletion");
+    return;
+  }
+  
   try {
     await roomClient.deleteRoom(roomName);
   } catch (error) {
