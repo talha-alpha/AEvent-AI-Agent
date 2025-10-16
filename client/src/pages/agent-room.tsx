@@ -152,6 +152,7 @@ export default function AgentRoom() {
   const [serverUrl, setServerUrl] = useState<string>("");
   const [roomName, setRoomName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     const initializeRoom = async () => {
@@ -198,9 +199,11 @@ export default function AgentRoom() {
         setRoomName(room.livekitRoomName);
         setIsLoading(false);
       } catch (error: any) {
+        const message = error.message || "Please configure the required API keys to use the AI agent.";
+        setErrorMessage(message);
         toast({
           title: "Configuration Required",
-          description: error.message || "Please configure the required API keys to use the AI agent.",
+          description: message,
           variant: "destructive",
         });
         setIsLoading(false);
@@ -224,8 +227,25 @@ export default function AgentRoom() {
   if (!token || !serverUrl) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center space-y-4">
-          <p className="text-lg text-destructive">Failed to initialize session</p>
+        <div className="text-center space-y-6 max-w-md px-6">
+          <div className="text-6xl">🔑</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-destructive">Configuration Required</h2>
+            <p className="text-muted-foreground">
+              {errorMessage || "Please configure LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables to enable AI agent functionality."}
+            </p>
+          </div>
+          <div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg text-left">
+            <p className="font-semibold mb-2">Required API Keys:</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>LIVEKIT_URL</li>
+              <li>LIVEKIT_API_KEY</li>
+              <li>LIVEKIT_API_SECRET</li>
+              <li>OPENAI_API_KEY</li>
+              <li>DEEPGRAM_API_KEY</li>
+              <li>CARTESIA_API_KEY</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
