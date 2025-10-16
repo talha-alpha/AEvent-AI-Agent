@@ -31,15 +31,15 @@ function AgentRoomContent({ roomName }: { roomName: string }) {
 
   const localVideoTrack = tracks.find(
     (track) => track.participant.isLocal && track.source === Track.Source.Camera
-  )?.publication?.track;
+  )?.publication?.track?.mediaStreamTrack;
 
   const localScreenTrack = tracks.find(
     (track) => track.participant.isLocal && track.source === Track.Source.ScreenShare
-  )?.publication?.track;
+  )?.publication?.track?.mediaStreamTrack;
 
   const remoteVideoTrack = tracks.find(
     (track) => !track.participant.isLocal && track.source === Track.Source.Camera
-  )?.publication?.track;
+  )?.publication?.track?.mediaStreamTrack;
 
   useEffect(() => {
     if (room) {
