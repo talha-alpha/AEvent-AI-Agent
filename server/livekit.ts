@@ -1,8 +1,8 @@
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 
-const livekitUrl = process.env.LIVEKIT_URL || "";
-const apiKey = process.env.LIVEKIT_API_KEY || "";
-const apiSecret = process.env.LIVEKIT_API_SECRET || "";
+const livekitUrl = process.env.LIVEKIT_URL!;
+const apiKey = process.env.LIVEKIT_API_KEY!;
+const apiSecret = process.env.LIVEKIT_API_SECRET!;
 
 export const roomClient = new RoomServiceClient(livekitUrl, apiKey, apiSecret);
 
